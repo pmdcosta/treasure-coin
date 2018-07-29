@@ -1,0 +1,55 @@
+<!--index.html-->
+
+<!--Embed the header.html template at this location-->
+{{ template "header.html" .}}
+
+<!-- Page Content -->
+
+<div class="h-100 align-items-center container">
+    <div class="wrapper">
+
+        <div class="container">
+            <div class="row">
+                <h2>Sign in</h2>
+                <div class="mt-3 container">
+
+                    <!--If there's an error, display it-->
+                    {{ if .ErrorTitle}}
+                        <div class="alert alert-danger">
+                            <strong>{{.ErrorTitle}}</strong> {{.ErrorMessage}}
+                        </div>
+                    {{end}}
+
+                    <form action="/auth/signin" method="POST">
+                        <!-- Email -->
+                        <div class="form-group row">
+                            <label for="email" class="col-sm-2 col-form-label"><strong>Email</strong></label>
+                            <div class="col-sm-10">
+                                <input type="email" class="form-control" id="email" name="email" placeholder="Email">
+                            </div>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="form-group row">
+                            <label for="password" class="col-sm-2 col-form-label"><strong>Password</strong></label>
+                            <div class="col-sm-10">
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="form-group row">
+                            <div class="offset-sm-2 col-sm-10">
+                                <button type="submit" class="btn btn-primary">Sign in</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!--Embed the footer.html template at this location-->
+{{ template "footer.html" .}}
