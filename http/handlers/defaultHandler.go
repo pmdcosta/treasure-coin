@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"github.com/pmdcosta/treasure-coin/http/util"
 	"github.com/pmdcosta/treasure-coin/http/middlewares"
+	"github.com/pmdcosta/treasure-coin/http/util"
+	log "github.com/sirupsen/logrus"
 )
 
 // DefaultHandler handles miscellaneous pages in the server.
@@ -26,8 +26,8 @@ type DefaultHandler struct {
 func NewDefaultHandler(auth *middlewares.AuthMiddleware) *DefaultHandler {
 	h := &DefaultHandler{
 		logger: log.WithFields(log.Fields{"package": "http", "module": "defaultHandler"}),
-		path: "/",
-		auth: auth,
+		path:   "/",
+		auth:   auth,
 	}
 
 	return h
@@ -44,6 +44,7 @@ func (h *DefaultHandler) Bootstrap(router *gin.Engine) {
 	h.group = router.Group(h.path)
 	h.group.GET(IndexRoute, h.showIndexPage)
 	h.group.GET(AboutRoute, h.showAboutPage)
+	h.group.GET(ProfileRoute, h.showProfilePage)
 	h.group.GET(SignInRoute, h.showSignInPage)
 	h.group.GET(SignUpRoute, h.showSignUpPage)
 }
@@ -56,6 +57,11 @@ func (h *DefaultHandler) showIndexPage(c *gin.Context) {
 // showAboutPage renders the about page.
 func (h *DefaultHandler) showAboutPage(c *gin.Context) {
 	util.Render(c, gin.H{}, AboutPage)
+}
+
+// showProfilePage renders the profile page.
+func (h *DefaultHandler) showProfilePage(c *gin.Context) {
+	util.Render(c, gin.H{}, ProfilePage)
 }
 
 // showSignInPage renders the about page.

@@ -1,0 +1,43 @@
+<!--index.html-->
+
+<!--Embed the header.html template at this location-->
+{{ template "header.html" .}}
+
+<!-- Page Content -->
+
+<div class="h-100 align-items-center container">
+    <div class="wrapper">
+
+        <h1>Profile</h1>
+
+        <div class="container">
+            <div class="row">
+                <div class="mt-3 container">
+
+                    <form>
+                        <!-- Username -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Username</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .user.Username }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Email</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .user.Email }}</p>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!--Embed the footer.html template at this location-->
+{{ template "footer.html" .}}

@@ -1,17 +1,16 @@
 package http
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/static"
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // templateDir describes the template asset directory.
-const templateDir  = "templates/*"
+const templateDir = "templates/*"
 
 // staticDir describes the static asset directory.
-const staticDir  = "public/"
-
+const staticDir = "public/"
 
 // Handler represents an http handler.
 type Handler interface {
@@ -30,19 +29,19 @@ type Server struct {
 	router *gin.Engine
 
 	// http handlers.
-	handlers  []Handler
+	handlers []Handler
 }
 
 // NewServer returns a new instance of Server.
-func NewServer(port string, h... Handler) *Server {
+func NewServer(port string, h ...Handler) *Server {
 	// set the server to production mode.
 	gin.SetMode(gin.ReleaseMode)
 
 	s := &Server{
-		router: gin.Default(),
-		logger: log.WithFields(log.Fields{"package": "http", "module":"server"}),
+		router:   gin.Default(),
+		logger:   log.WithFields(log.Fields{"package": "http", "module": "server"}),
 		handlers: h,
-		port: port,
+		port:     port,
 	}
 	return s
 }
@@ -65,5 +64,3 @@ func (c *Server) Open() error {
 	c.router.Run(c.port)
 	return nil
 }
-
-

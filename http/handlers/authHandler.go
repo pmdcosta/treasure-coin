@@ -3,10 +3,12 @@ package handlers
 import (
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"github.com/pmdcosta/treasure-coin/http/util"
+	"github.com/pmdcosta/treasure-coin"
 	"github.com/pmdcosta/treasure-coin/http/middlewares"
+	"github.com/pmdcosta/treasure-coin/http/util"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthHandler handles the authentication routes in the server.
@@ -22,14 +24,18 @@ type AuthHandler struct {
 
 	// middleware for handling user auth.
 	auth *middlewares.AuthMiddleware
+
+	// external services.
+	users UserManager
 }
 
 // NewAuthHandler returns a new instance of AuthHandler.
-func NewAuthHandler(auth *middlewares.AuthMiddleware) *AuthHandler {
+func NewAuthHandler(auth *middlewares.AuthMiddleware, users UserManager) *AuthHandler {
 	h := &AuthHandler{
 		logger: log.WithFields(log.Fields{"package": "http", "module": "authHandler"}),
-		path: "/auth",
-		auth: auth,
+		path:   "/auth",
+		auth:   auth,
+		users:  users,
 	}
 
 	return h
@@ -40,7 +46,7 @@ func (h *AuthHandler) Bootstrap(router *gin.Engine) {
 	h.logger.Info("Bootstrapping auth handler")
 
 	// register middleware.
-	//router.Use(h.auth.SetUserStatus())
+	router.Use(h.auth.SetUserStatus())
 
 	// auth routes.
 	h.group = router.Group(h.path)
@@ -55,32 +61,38 @@ func (h *AuthHandler) performSignIn(c *gin.Context) {
 	email := c.PostForm("email")
 	password := c.PostForm("password")
 
-	// check if the credentials are valid.
-	if email == "pmdcosta@outlook.com" && password == "password"{
-		// set the token in a cookie.
-		c.SetCookie("token", util.CreateSessionToken(), 3600, "", "", false, true)
-		// update context with login status.
-		c.Set("is_logged_in", true)
-		// redirect to home page.
+	// get user from the database.
+	u, err := h.users.FindByEmail(email)
+	if err != nil {
 		util.Render(c, gin.H{
-			"MessageTitle":   "Success!",
-			"MessageMessage": "welcome back to treasure coin!",
-		}, IndexPage)
-	} else {
+			"ErrorTitle":   "Failed!",
+			"ErrorMessage": "It seems we messed up somehow, please try again.",
+		}, SignInPage)
+		return
+	}
+
+	// check if the credentials are correct.
+	if !checkPasswordHash(password, u.Password) {
 		util.Render(c, gin.H{
 			"ErrorTitle":   "Failed!",
 			"ErrorMessage": "Invalid credentials provided",
 		}, SignInPage)
+		return
 	}
+
+	// log the user in.
+	h.auth.AddSession(c, u.ID)
+
+	// redirect to home page.
+	util.Render(c, gin.H{
+		"MessageTitle":   "Success!",
+		"MessageMessage": "welcome back to treasure coin!",
+	}, IndexPage)
 }
 
 // performSignOut renders the about page.
 func (h *AuthHandler) performSignOut(c *gin.Context) {
-	// clear the cookie.
-	c.SetCookie("token", "", -1, "", "", false, true)
-
-	// update context with login status.
-	c.Set("is_logged_in", false)
+	h.auth.RemoveSession(c)
 
 	// Redirect to the home page
 	c.Redirect(http.StatusTemporaryRedirect, IndexRoute)
@@ -93,23 +105,59 @@ func (h *AuthHandler) performSignUp(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
-	// store the user data!!
-
-	// check if the values are valid.
-	if email != "pmdcosta@outlook.com" && username != "" && password != "" {
-		// set the token in a cookie.
-		c.SetCookie("token", util.CreateSessionToken(), 3600, "", "", false, true)
-		// update context with login status.
-		c.Set("is_logged_in", true)
-		// redirect to home page.
-		util.Render(c, gin.H{
-			"MessageTitle":   "Success!",
-			"MessageMessage": "welcome to treasure coin!",
-		}, IndexPage)
-	} else {
+	// hash the supplied password.
+	hash, err := hashPassword(password)
+	if err != nil {
 		util.Render(c, gin.H{
 			"ErrorTitle":   "Failed!",
-			"ErrorMessage": "An account with that email already exists!",
+			"ErrorMessage": "It seems we messed up somehow, please try again.",
 		}, SignUpPage)
+		return
 	}
+	user := coin.User{
+		Email:    email,
+		Username: username,
+		Password: hash,
+	}
+
+	// store the user data.
+	user, err = h.users.Add(user)
+	if err != nil {
+		util.Render(c, gin.H{
+			"ErrorTitle":   "Failed!",
+			"ErrorMessage": "An account with that email already exists.",
+		}, SignUpPage)
+		return
+	}
+
+	// log the user in.
+	h.auth.AddSession(c, user.ID)
+
+	// redirect to home page.
+	util.Render(c, gin.H{
+		"MessageTitle":   "Success!",
+		"MessageMessage": "welcome to treasure coin!",
+	}, IndexPage)
+}
+
+// hashPassword generates an hash based on the supplied string.
+func hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+// checkPasswordHash checks if the hash was created from the string.
+func checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+// UserManager defines the interface to interact with the user persistence layer.
+type UserManager interface {
+	Add(user coin.User) (coin.User, error)
+	Find(id uint) (coin.User, error)
+	FindByEmail(email string) (coin.User, error)
+	FindByUsername(username string) (coin.User, error)
+	Update(user coin.User) (coin.User, error)
+	Delete(user coin.User) error
 }

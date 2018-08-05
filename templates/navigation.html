@@ -13,6 +13,13 @@
                     <a class="nav-link" href="/about">About</a>
                 </li>
 
+                <!-- Profile -->
+                {{ if .is_logged_in }}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/me">Profile</a>
+                    </li>
+                {{end}}
+
                 <!-- Sign in -->
                 {{ if not .is_logged_in }}
                 <li class="nav-item">
