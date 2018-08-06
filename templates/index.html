@@ -23,6 +23,13 @@
         </div>
     {{end}}
 
+    <!--If there's an error, display it-->
+    {{ if .ErrorTitle}}
+        <div class="mt-2 alert alert-danger">
+            <strong>{{.ErrorTitle}}</strong> {{.ErrorMessage}}
+        </div>
+    {{end}}
+
     <!-- Introduction Section -->
     <h1 class="my-4">Treasure Coin</h1>
     <div class="row justify-content-around">
@@ -32,6 +39,9 @@
             <p>Any player can create a new exploration game and print the treasure codes. Once these codes are hidden, any participating player can find the hidden treasures and reap the rewards.</p>
             <p>Through integration with the Open Simple Token API, the game organizer can attach currency to the treasures.</p>
             <p>Once a player finds the hidden treasure, they can claim both the glory and the branded token reward.</p>
+            <form action="/games/create" method="GET">
+                <button type="submit" class="btn btn-primary">Create Game</button>
+            </form>
         </div>
         <div class="col-lg-6">
             <img class="img-fluid rounded" src="http://placehold.it/700x450" alt="">
@@ -39,45 +49,22 @@
     </div>
     <hr>
 
-
-    <!-- Top Games -->
-    <h2>Top Games</h2>
+    <!-- Games -->
+    <h2>Games</h2>
     <div class="row">
+    {{ range $key, $value := .games }}
         <div class="col-lg-4 col-sm-6 portfolio-item">
             <div class="card h-100">
-                <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
                 <div class="card-body">
                     <h4 class="card-title">
-                        <a href="#">Game 01</a>
+                        <a href="/games/describe/{{ $key }}">{{ $value.Title }}</a>
                     </h4>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Amet numquam aspernatur eum quasi sapiente nesciunt? Voluptatibus sit, repellat sequi itaque deserunt, dolores in, nesciunt, illum tempora ex quae? Nihil, dolorem!</p>
+                    <p class="card-text">{{ $value.Description }}</p>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 col-sm-6 portfolio-item">
-            <div class="card h-100">
-                <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
-                <div class="card-body">
-                    <h4 class="card-title">
-                        <a href="#">Game 02</a>
-                    </h4>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-sm-6 portfolio-item">
-            <div class="card h-100">
-                <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
-                <div class="card-body">
-                    <h4 class="card-title">
-                        <a href="#">Game 03</a>
-                    </h4>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quos quisquam, error quod sed cumque, odio distinctio velit nostrum temporibus necessitatibus et facere atque iure perspiciatis mollitia recusandae vero vel quam!</p>
-                </div>
-            </div>
-        </div>
+    {{ end }}
     </div>
-    <!-- /.row -->
 
 </div>
 <!-- /.container -->

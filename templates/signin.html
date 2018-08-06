@@ -8,9 +8,10 @@
 <div class="h-100 align-items-center container">
     <div class="wrapper">
 
+        <h1>Sign in</h1>
+
         <div class="container">
             <div class="row">
-                <h2>Sign in</h2>
                 <div class="mt-3 container">
 
                     <!--If there's an error, display it-->
@@ -23,23 +24,21 @@
                     <form action="/auth/signin" method="POST">
                         <!-- Email -->
                         <div class="form-group row">
-                            <label for="email" class="col-sm-2 col-form-label"><strong>Email</strong></label>
-                            <div class="col-sm-10">
+                            <div class="col-sm-12">
                                 <input type="email" class="form-control" id="email" name="email" placeholder="Email">
                             </div>
                         </div>
 
                         <!-- Password -->
                         <div class="form-group row">
-                            <label for="password" class="col-sm-2 col-form-label"><strong>Password</strong></label>
-                            <div class="col-sm-10">
+                            <div class="col-sm-12">
                                 <input type="password" class="form-control" id="password" name="password" placeholder="Password">
                             </div>
                         </div>
 
                         <!-- Submit -->
                         <div class="form-group row">
-                            <div class="offset-sm-2 col-sm-10">
+                            <div class="col-sm-10">
                                 <button type="submit" class="btn btn-primary">Sign in</button>
                             </div>
                         </div>

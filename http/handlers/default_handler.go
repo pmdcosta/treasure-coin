@@ -20,14 +20,18 @@ type DefaultHandler struct {
 
 	// middleware for handling user auth.
 	auth *middlewares.AuthMiddleware
+
+	// external services.
+	games GameManager
 }
 
 // NewDefaultHandler returns a new instance of DefaultHandler.
-func NewDefaultHandler(auth *middlewares.AuthMiddleware) *DefaultHandler {
+func NewDefaultHandler(auth *middlewares.AuthMiddleware, games GameManager) *DefaultHandler {
 	h := &DefaultHandler{
-		logger: log.WithFields(log.Fields{"package": "http", "module": "defaultHandler"}),
+		logger: log.WithFields(log.Fields{"package": "http", "module": "default-handler"}),
 		path:   "/",
 		auth:   auth,
+		games:  games,
 	}
 
 	return h
@@ -51,7 +55,10 @@ func (h *DefaultHandler) Bootstrap(router *gin.Engine) {
 
 // showIndexPage renders the about page.
 func (h *DefaultHandler) showIndexPage(c *gin.Context) {
-	util.Render(c, gin.H{}, IndexPage)
+	games := h.games.List()
+	util.Render(c, gin.H{
+		"games": games,
+	}, IndexPage)
 }
 
 // showAboutPage renders the about page.

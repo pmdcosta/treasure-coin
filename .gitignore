@@ -1,3 +1,4 @@
 .idea
 bootstrap_stuff
 *_mock.go
+*.db

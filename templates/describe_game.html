@@ -1,0 +1,77 @@
+<!--index.html-->
+
+<!--Embed the header.html template at this location-->
+{{ template "header.html" .}}
+
+<!-- Page Content -->
+
+<div class="h-100 align-items-center container">
+    <div class="wrapper">
+
+        <!--If there's a message, display it-->
+    {{ if .MessageTitle}}
+        <div class="mt-2 alert alert-success">
+            <strong>{{.MessageTitle}}</strong> {{.MessageMessage}}
+        </div>
+        <br>
+    {{end}}
+
+
+        <h1>Game</h1>
+
+        <div class="container">
+            <div class="row">
+                <div class="mt-3 container">
+
+                    <form>
+                        <!-- Title -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Title</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .game.Title }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Description</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .game.Description }}</p>
+                            </div>
+                        </div>
+
+                        <!-- StartDate -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>StartDate</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .game.StartDate.Format "2006 Jan 02" }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Creator -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Creator</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .game.Creator }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Treasures -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Treasures</strong></label>
+                            <div class="col-sm-10">
+                            {{ range $key, $value := .game.Treasures }}
+                                <a href="/games/describe/{{ $.game.ID }}/treasure/{{ $value.ID }}"><li class="list-group-item">{{ $value.Name }}</li></a>
+                            {{ end }}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!--Embed the footer.html template at this location-->
+{{ template "footer.html" .}}

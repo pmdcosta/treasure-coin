@@ -8,19 +8,22 @@ import (
 )
 
 //go:generate moq -out user_service_mock.go . UserManager
+//go:generate moq -out session_service_mock.go . SessionManager
 
 // AuthMiddleware is a test wrapper.
 type AuthMiddleware struct {
 	AuthMiddleware *middlewares.AuthMiddleware
 	Users          *middlewares.UserManagerMock
+	Sessions       *middlewares.SessionManagerMock
 }
 
 // NewAuthMiddleware returns a new instance of AuthMiddleware.
 func NewAuthMiddleware() *AuthMiddleware {
 	log.SetLevel(log.DebugLevel)
 	u := &middlewares.UserManagerMock{}
+	s := &middlewares.SessionManagerMock{}
 	m := &AuthMiddleware{
-		AuthMiddleware: middlewares.NewAuthMiddleware(u),
+		AuthMiddleware: middlewares.NewAuthMiddleware(u, s),
 	}
 	return m
 }

@@ -1,0 +1,89 @@
+<!--index.html-->
+
+<!--Embed the header.html template at this location-->
+{{ template "header.html" .}}
+
+<!-- Page Content -->
+
+<div class="h-100 align-items-center container">
+    <div class="wrapper">
+
+        <!--If there's a message, display it-->
+        {{ if .MessageTitle}}
+            <div class="mt-2 alert alert-success">
+                <strong>{{.MessageTitle}}</strong> {{.MessageMessage}}
+            </div>
+            <br>
+        {{end}}
+
+
+        <h1>{{ .treasure.Name }}</h1>
+
+        <div class="container">
+            <div class="row">
+                <div class="mt-3 container">
+
+                    <form>
+                        <!-- Location -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Location</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .treasure.Location }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Hint -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"><strong>Hint</strong></label>
+                            <div class="col-sm-10">
+                                <p>{{ .treasure.Hint }}</p>
+                            </div>
+                        </div>
+
+                        {{ if .treasure.Found }}
+                            <!-- FoundUser -->
+                            <div class="form-group row">
+                                <label class="col-sm-2 col-form-label"><strong>Discoverer</strong></label>
+                                <div class="col-sm-10">
+                                    <p>{{ .treasure.FoundUser }}</p>
+                                </div>
+                            </div>
+
+                            <!-- FoundDate -->
+                            <div class="form-group row">
+                                <label class="col-sm-2 col-form-label"><strong>Discovery Date</strong></label>
+                                <div class="col-sm-10">
+                                    <p>{{ .treasure.FoundDate.Format "2006 Jan 02" }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Found -->
+                            <div class="form-group row">
+                                <label class="col-sm-10 col-form-label"><strong>Already Discovered!</strong></label>
+                            </div>
+                        {{ end }}
+
+                        {{ if not .treasure.Found }}
+                            <!-- Found -->
+                            <div class="form-group row">
+                                <label class="col-sm-10 col-form-label"><strong>Remains to be Found!</strong></label>
+                            </div>
+                        {{ end }}
+
+                        {{ if eq .game.Creator .user.Email }}
+                            <hr>
+                            <!-- QR Code -->
+                            <div class="col-lg-6">
+                                <img class="img-fluid rounded" src="/assets/codes/{{ .treasure.QRCode }}" alt="">
+                            </div>
+                        {{ end }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!--Embed the footer.html template at this location-->
+{{ template "footer.html" .}}

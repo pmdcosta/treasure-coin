@@ -20,6 +20,13 @@
                     </li>
                 {{end}}
 
+                <!-- Games -->
+                {{ if .is_logged_in }}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/games/list">Games</a>
+                    </li>
+                {{end}}
+
                 <!-- Sign in -->
                 {{ if not .is_logged_in }}
                 <li class="nav-item">

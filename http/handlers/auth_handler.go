@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pmdcosta/treasure-coin"
 	"github.com/pmdcosta/treasure-coin/http/middlewares"
@@ -62,32 +64,32 @@ func (h *AuthHandler) performSignIn(c *gin.Context) {
 	password := c.PostForm("password")
 
 	// get user from the database.
-	u, err := h.users.FindByEmail(email)
+	u, err := h.users.Find(email)
 	if err != nil {
-		util.Render(c, gin.H{
-			"ErrorTitle":   "Failed!",
-			"ErrorMessage": "It seems we messed up somehow, please try again.",
-		}, SignInPage)
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "It seems we messed up somehow, please try again.",
+		}.Render(), SignInPage)
 		return
 	}
 
 	// check if the credentials are correct.
 	if !checkPasswordHash(password, u.Password) {
-		util.Render(c, gin.H{
-			"ErrorTitle":   "Failed!",
-			"ErrorMessage": "Invalid credentials provided",
-		}, SignInPage)
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "Invalid credentials provided.",
+		}.Render(), SignInPage)
 		return
 	}
 
 	// log the user in.
-	h.auth.AddSession(c, u.ID)
+	h.auth.AddSession(c, u.Email)
 
 	// redirect to home page.
-	util.Render(c, gin.H{
-		"MessageTitle":   "Success!",
-		"MessageMessage": "welcome back to treasure coin!",
-	}, IndexPage)
+	util.Render(c, util.RequestSuccess{
+		Title:   "Success!",
+		Message: fmt.Sprintf("Welcome back to treasure coin %s.", u.Username),
+	}.Render(), IndexPage)
 }
 
 // performSignOut renders the about page.
@@ -108,10 +110,10 @@ func (h *AuthHandler) performSignUp(c *gin.Context) {
 	// hash the supplied password.
 	hash, err := hashPassword(password)
 	if err != nil {
-		util.Render(c, gin.H{
-			"ErrorTitle":   "Failed!",
-			"ErrorMessage": "It seems we messed up somehow, please try again.",
-		}, SignUpPage)
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "It seems we messed up somehow, please try again.",
+		}.Render(), SignUpPage)
 		return
 	}
 	user := coin.User{
@@ -121,23 +123,23 @@ func (h *AuthHandler) performSignUp(c *gin.Context) {
 	}
 
 	// store the user data.
-	user, err = h.users.Add(user)
+	err = h.users.Add(user)
 	if err != nil {
-		util.Render(c, gin.H{
-			"ErrorTitle":   "Failed!",
-			"ErrorMessage": "An account with that email already exists.",
-		}, SignUpPage)
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "An account with that email already exists.",
+		}.Render(), SignUpPage)
 		return
 	}
 
 	// log the user in.
-	h.auth.AddSession(c, user.ID)
+	h.auth.AddSession(c, user.Email)
 
 	// redirect to home page.
-	util.Render(c, gin.H{
-		"MessageTitle":   "Success!",
-		"MessageMessage": "welcome to treasure coin!",
-	}, IndexPage)
+	util.Render(c, util.RequestSuccess{
+		Title:   "Success!",
+		Message: fmt.Sprintf("Welcome to treasure coin, %s.", user.Username),
+	}.Render(), IndexPage)
 }
 
 // hashPassword generates an hash based on the supplied string.
@@ -154,10 +156,6 @@ func checkPasswordHash(password, hash string) bool {
 
 // UserManager defines the interface to interact with the user persistence layer.
 type UserManager interface {
-	Add(user coin.User) (coin.User, error)
-	Find(id uint) (coin.User, error)
-	FindByEmail(email string) (coin.User, error)
-	FindByUsername(username string) (coin.User, error)
-	Update(user coin.User) (coin.User, error)
-	Delete(user coin.User) error
+	Add(user coin.User) error
+	Find(email string) (coin.User, error)
 }

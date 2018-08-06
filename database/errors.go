@@ -6,10 +6,12 @@ import (
 
 // database errors.
 const (
-	ErrConnect    = coin.Error("failed to connect to the database")
-	ErrMigrate    = coin.Error("failed to apply database migrations")
-	ErrCreate     = coin.Error("failed to create record in the database")
-	ErrRetrieving = coin.Error("failed to retrieve a record from the database")
-	ErrUpdate     = coin.Error("failed to update a record in the database")
-	ErrDelete     = coin.Error("failed to delete a record in the database")
+	ErrTransaction       = coin.Error("failed to start transaction")
+	ErrCreateCollection  = coin.Error("failed to create collection")
+	ErrRecordNotFound    = coin.Error("record does not exist")
+	ErrRecordExists      = coin.Error("record already exists")
+	ErrCreateRecord      = coin.Error("failed to insert record")
+	ErrDeleteRecord      = coin.Error("failed to delete record")
+	ErrIterateCollection = coin.Error("failed to iterate over collection")
+	ErrCreateKey         = coin.Error("failed to generate a key for the  collection")
 )
