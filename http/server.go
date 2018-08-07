@@ -23,7 +23,10 @@ type Server struct {
 	logger *log.Entry
 
 	// http port to serve from.
-	port string
+	port   string
+	cert   string
+	secret string
+	ssl    bool
 
 	// router instance.
 	router *gin.Engine
@@ -33,7 +36,7 @@ type Server struct {
 }
 
 // NewServer returns a new instance of Server.
-func NewServer(port string, h ...Handler) *Server {
+func NewServer(port, cert, secret string, ssl bool, h ...Handler) *Server {
 	// set the server to production mode.
 	gin.SetMode(gin.ReleaseMode)
 
@@ -42,6 +45,9 @@ func NewServer(port string, h ...Handler) *Server {
 		logger:   log.WithFields(log.Fields{"package": "http", "module": "server"}),
 		handlers: h,
 		port:     port,
+		cert:     cert,
+		secret:   secret,
+		ssl:      ssl,
 	}
 	return s
 }
@@ -61,5 +67,10 @@ func (c *Server) Open() error {
 
 	// starts the http server.
 	c.logger.Info("Starting server at port: " + c.port)
-	return c.router.Run(c.port)
+
+	if c.ssl {
+		return c.router.RunTLS(c.port, c.cert, c.secret)
+	} else {
+		return c.router.Run(c.port)
+	}
 }

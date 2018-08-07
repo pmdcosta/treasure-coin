@@ -3,3 +3,4 @@ javascript_client
 *_mock.go
 *.db
 .env
+ssl
