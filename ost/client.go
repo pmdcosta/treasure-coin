@@ -1,10 +1,12 @@
 package ost
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -132,4 +134,42 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	json.Unmarshal(contents, &resp)
 
 	return resp.Data.Transactions, nil
+}
+
+// Airdrop adds TreasureCoins to a user's balance from OST.
+func (c *Client) Airdrop(user string, amount float64) error {
+	r := fmt.Sprintf("/airdrops")
+	t := fmt.Sprintf("%d", time.Now().Unix())
+	q := fmt.Sprintf("amount=%f&api_key=%s&request_timestamp=%s&user_ids=%s", amount, c.apiKey, t, user)
+	s := c.CreateSignature(r, q)
+	fq := q + "&signature=" + s
+	u := c.url + r + "?" + s
+
+	// make the request.
+	response, err := http.Post(u, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(fq)))
+	if err != nil {
+		return err
+	}
+
+	// parse the response.
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	type GetUserResponse struct {
+		Success bool `json:"success"`
+		Error   struct {
+			Msg string `json:"msg"`
+		} `json:"err"`
+	}
+
+	var resp GetUserResponse
+	json.Unmarshal(contents, &resp)
+
+	if !resp.Success {
+		return errors.New(resp.Error.Msg)
+	}
+	return nil
 }

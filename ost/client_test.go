@@ -68,3 +68,10 @@ func TestClient_GetUserTransactions(t *testing.T) {
 	assert.Equal(t, b[0].FromUserID, "9bc1ee0d-084b-4d75-b798-fda6a270adcc")
 	assert.Equal(t, b[0].ToUserID, "87e9132d-0586-4beb-9600-ffa050966bc8")
 }
+
+// TestClient_Airdrop tests incrementing user's balance the API.
+func TestClient_Airdrop(t *testing.T) {
+	c := NewClient()
+	err := c.Airdrop("1bc46b40-2d76-4bfa-a806-b9ce1983ae8f", 0.1)
+	assert.Nil(t, err)
+}
