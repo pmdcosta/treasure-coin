@@ -22,6 +22,7 @@ type GameHandler struct {
 
 	// handler path
 	path string
+	host string
 
 	// router group.
 	group *gin.RouterGroup
@@ -30,16 +31,19 @@ type GameHandler struct {
 	auth *middlewares.AuthMiddleware
 
 	// external services.
-	games GameManager
+	games   GameManager
+	wallets WalletService
 }
 
 // NewGameHandler returns a new instance of GameHandler.
-func NewGameHandler(auth *middlewares.AuthMiddleware, games GameManager) *GameHandler {
+func NewGameHandler(auth *middlewares.AuthMiddleware, games GameManager, wallets WalletService, host string) *GameHandler {
 	h := &GameHandler{
-		logger: log.WithFields(log.Fields{"package": "http", "module": "game-handler"}),
-		path:   "/games",
-		auth:   auth,
-		games:  games,
+		logger:  log.WithFields(log.Fields{"package": "http", "module": "game-handler"}),
+		path:    "/games",
+		auth:    auth,
+		games:   games,
+		wallets: wallets,
+		host:    host,
 	}
 
 	return h
@@ -144,7 +148,7 @@ func (h *GameHandler) performCreateGame(c *gin.Context) {
 		// create token.
 		token, err := uuid.NewV4()
 		if err != nil {
-			h.logger.Info("failed to generate uuid")
+			h.logger.WithFields(log.Fields{"err": err}).Error("failed to generate uuid")
 			util.Render(c, util.RequestError{
 				Title:   "Failed!",
 				Message: "Failed to create game, please try again.",
@@ -163,8 +167,19 @@ func (h *GameHandler) performCreateGame(c *gin.Context) {
 		g.Treasures[t.id] = treasure
 	}
 
+	// attempt to make payment for the game.
+	err := h.wallets.MakePayment(user.(coin.User).Wallet, len(r.treasures))
+	if err != nil {
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "Failed to create game, you require more tokens to create that many treasures (1 treasure = 0.1 Coins).",
+		}.Render(), CreateGamePage)
+	}
+
+	// persist game data.
 	gameID, err := h.games.Add(g)
 	if err != nil {
+		h.logger.Error(err)
 		util.Render(c, util.RequestError{
 			Title:   "Failed!",
 			Message: "Failed to create game, please try again.",
@@ -174,7 +189,7 @@ func (h *GameHandler) performCreateGame(c *gin.Context) {
 
 	// create qr codes for tokens.
 	for _, t := range g.Treasures {
-		discoveryUrl := fmt.Sprintf("http://192.168.122.1:8080/games/found/%s/%s?token=%s", gameID, t.ID, t.Token)
+		discoveryUrl := fmt.Sprintf("%s/games/found/%s/%s?token=%s", h.host, gameID, t.ID, t.Token)
 		codeFile := fmt.Sprintf("%s-%s.png", gameID, t.ID)
 		err := qrcode.WriteFile(discoveryUrl, qrcode.Medium, 256, fmt.Sprintf("%s/%s", "public/codes", codeFile))
 		if err != nil {
@@ -268,18 +283,33 @@ func (h *GameHandler) performFoundTreasure(c *gin.Context) {
 
 	// check if token is correct.
 	if treasure.Token != token {
-		util.Render(c, util.RequestError{
-			Title:   "Failed!",
-			Message: "Incorrect treasure token.",
-		}.Render(), IndexPage)
+		util.Render(c, gin.H{
+			"game":         game,
+			"treasure":     treasure,
+			"ErrorTitle":   "Failed!",
+			"ErrorMessage": "Incorrect treasure token!",
+		}, DescribeTreasurePage)
 	}
 
 	// check if treasure was already found.
 	if treasure.Found {
-		util.Render(c, util.RequestError{
-			Title:   "Failed!",
-			Message: "This treasure was already found.",
-		}.Render(), IndexPage)
+		util.Render(c, gin.H{
+			"game":         game,
+			"treasure":     treasure,
+			"ErrorTitle":   "Failed!",
+			"ErrorMessage": "This treasure has already been found!",
+		}, DescribeTreasurePage)
+	}
+
+	// get rewarded.
+	if err := h.wallets.GetRewarded(user.(coin.User).Wallet); err != nil {
+		h.logger.WithFields(log.Fields{"wallet": user.(coin.User).Wallet}).Error(err)
+		util.Render(c, gin.H{
+			"game":         game,
+			"treasure":     treasure,
+			"ErrorTitle":   "Failed!",
+			"ErrorMessage": "It seems we messed up somehow, please try again!",
+		}, DescribeTreasurePage)
 	}
 
 	// set the treasure as found.

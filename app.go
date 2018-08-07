@@ -7,6 +7,7 @@ type User struct {
 	Email    string
 	Username string
 	Password string
+	Wallet   string
 }
 
 // Game represents the domain game structure.
@@ -30,4 +31,13 @@ type Treasure struct {
 	Found     bool
 	FoundDate time.Time
 	FoundUser string
+}
+
+// Transaction represents the domain coin transfer event.
+type Transaction struct {
+	FromWallet string
+	ToWallet   string
+	Event      string
+	Date       time.Time
+	Amount     string
 }

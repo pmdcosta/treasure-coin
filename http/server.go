@@ -61,6 +61,5 @@ func (c *Server) Open() error {
 
 	// starts the http server.
 	c.logger.Info("Starting server at port: " + c.port)
-	c.router.Run(c.port)
-	return nil
+	return c.router.Run(c.port)
 }

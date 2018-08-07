@@ -8,10 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pmdcosta/treasure-coin"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 )
 
@@ -25,31 +27,22 @@ type Client struct {
 	companyID string
 }
 
+// Transaction represents an OST transaction between two wallets.
 type Transaction struct {
-	Id               string `json:"id"`
-	FromUserID       string `json:"from_user_id"`
-	ToUserID         string `json:"to_user_id"`
-	TransactionHash  string `json:"transaction_hash"`
-	ActionId         int    `json:"action_id"`
-	TimeStamp        int    `json:"timestamp"`
-	Status           string `json:"status"`
-	GasPrice         string `json:"gas_price"`
-	GasUsed          string `json:"gas_used"`
-	TransactionFee   string `json:"transaction_fee"`
-	BlockNumber      int    `json:"block_number"`
-	Amount           string `json:"amount"`
-	CommissionAmount string `json:"commission_amount"`
-	AirdropedAmount  string `json:"airdropped_amount"`
+	FromUserID string `json:"from_user_id"`
+	ToUserID   string `json:"to_user_id"`
+	TimeStamp  int    `json:"timestamp"`
+	Amount     string `json:"amount"`
 }
 
 // NewClient returns a new configuration client.
-func NewClient(url, apiKey, apiSecret, companyID string) *Client {
+func NewClient(config Config) *Client {
 	c := &Client{
 		logger:    log.WithFields(log.Fields{"package": "ost"}),
-		url:       url,
-		apiKey:    apiKey,
-		apiSecret: apiSecret,
-		companyID: companyID,
+		url:       config.Url,
+		apiKey:    config.Key,
+		apiSecret: config.Secret,
+		companyID: config.Company,
 	}
 	return c
 }
@@ -160,7 +153,7 @@ func (c *Client) CreateUser(user string) (string, error) {
 }
 
 // GetUserTransactions retrieves the last 10 transactions from OST.
-func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
+func (c *Client) GetUserTransactions(user string) ([]coin.Transaction, error) {
 	// build the request.
 	t := fmt.Sprintf("%d", time.Now().Unix())
 	r := fmt.Sprintf("/ledger/%s/", user)
@@ -171,7 +164,7 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	}
 	u, err := c.BuildRequest(c.url, r, query)
 	if err != nil {
-		return []Transaction{}, err
+		return []coin.Transaction{}, err
 	}
 
 	// make the request.
@@ -188,7 +181,7 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	}
 
 	if response.StatusCode != 200 {
-		return []Transaction{}, errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
+		return []coin.Transaction{}, errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
 	}
 
 	// response struct.
@@ -203,7 +196,24 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	var resp GetUserResponse
 	json.Unmarshal(contents, &resp)
 
-	return resp.Data.Transactions, nil
+	// format transaction data.
+	transactions := make([]coin.Transaction, 0)
+	for _, t := range resp.Data.Transactions {
+		tr := coin.Transaction{
+			FromWallet: t.FromUserID,
+			ToWallet:   t.ToUserID,
+			Date:       time.Unix(int64(t.TimeStamp/1000), 0),
+			Amount:     t.Amount,
+		}
+		if t.FromUserID == c.companyID {
+			tr.Event = "Treasure Found"
+		} else {
+			tr.Event = "Game Created"
+		}
+		transactions = append(transactions, tr)
+	}
+
+	return transactions, nil
 }
 
 // Airdrop adds TreasureCoins to a user's balance from OST.
@@ -326,8 +336,6 @@ func (c *Client) MakePayment(user string, amount int) error {
 		return errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
 	}
 
-	fmt.Println(string(contents))
-
 	return nil
 }
 
@@ -353,4 +361,39 @@ func (c *Client) BuildRequest(host string, resource string, query map[string]str
 	u.RawQuery = q.Encode()
 
 	return u, nil
+}
+
+// Config are OST API config credentials.
+type Config struct {
+	Key     string
+	Secret  string
+	Url     string
+	Company string
+}
+
+func (c *Config) LoadCred(config, ostUrl, ostKey, ostSecret, ostCompany string) {
+	// if the OST credentials are not provided use the '.env file'.
+	file, err := os.Open(config)
+	if err != nil {
+		panic(err)
+	}
+
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&c)
+	if err != nil {
+		panic(err)
+	}
+
+	if ostUrl != "" {
+		c.Url = ostUrl
+	}
+	if ostKey != "" {
+		c.Key = ostKey
+	}
+	if ostSecret != "" {
+		c.Secret = ostSecret
+	}
+	if ostCompany != "" {
+		c.Company = ostCompany
+	}
 }

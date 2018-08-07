@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/pmdcosta/treasure-coin"
 	"github.com/pmdcosta/treasure-coin/http/middlewares"
 	"github.com/pmdcosta/treasure-coin/http/util"
 	log "github.com/sirupsen/logrus"
@@ -22,16 +23,20 @@ type DefaultHandler struct {
 	auth *middlewares.AuthMiddleware
 
 	// external services.
-	games GameManager
+	users   UserManager
+	games   GameManager
+	wallets WalletService
 }
 
 // NewDefaultHandler returns a new instance of DefaultHandler.
-func NewDefaultHandler(auth *middlewares.AuthMiddleware, games GameManager) *DefaultHandler {
+func NewDefaultHandler(auth *middlewares.AuthMiddleware, games GameManager, users UserManager, wallets WalletService) *DefaultHandler {
 	h := &DefaultHandler{
-		logger: log.WithFields(log.Fields{"package": "http", "module": "default-handler"}),
-		path:   "/",
-		auth:   auth,
-		games:  games,
+		logger:  log.WithFields(log.Fields{"package": "http", "module": "default-handler"}),
+		path:    "/",
+		auth:    auth,
+		games:   games,
+		users:   users,
+		wallets: wallets,
 	}
 
 	return h
@@ -68,7 +73,25 @@ func (h *DefaultHandler) showAboutPage(c *gin.Context) {
 
 // showProfilePage renders the profile page.
 func (h *DefaultHandler) showProfilePage(c *gin.Context) {
-	util.Render(c, gin.H{}, ProfilePage)
+	user, exists := c.Get(util.UserCookie)
+	if !exists {
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "Requires a logged in user.",
+		}.Render(), IndexPage)
+		return
+	}
+
+	// get user balance.
+	b, _ := h.wallets.GetUserBalance(user.(coin.User).Wallet)
+
+	// get user transactions.
+	t, _ := h.wallets.GetUserTransactions(user.(coin.User).Wallet)
+
+	util.Render(c, gin.H{
+		"balance":      b,
+		"transactions": t,
+	}, ProfilePage)
 }
 
 // showSignInPage renders the about page.

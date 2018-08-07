@@ -28,16 +28,18 @@ type AuthHandler struct {
 	auth *middlewares.AuthMiddleware
 
 	// external services.
-	users UserManager
+	users   UserManager
+	wallets WalletService
 }
 
 // NewAuthHandler returns a new instance of AuthHandler.
-func NewAuthHandler(auth *middlewares.AuthMiddleware, users UserManager) *AuthHandler {
+func NewAuthHandler(auth *middlewares.AuthMiddleware, users UserManager, wallets WalletService) *AuthHandler {
 	h := &AuthHandler{
-		logger: log.WithFields(log.Fields{"package": "http", "module": "authHandler"}),
-		path:   "/auth",
-		auth:   auth,
-		users:  users,
+		logger:  log.WithFields(log.Fields{"package": "http", "module": "authHandler"}),
+		path:    "/auth",
+		auth:    auth,
+		users:   users,
+		wallets: wallets,
 	}
 
 	return h
@@ -66,6 +68,7 @@ func (h *AuthHandler) performSignIn(c *gin.Context) {
 	// get user from the database.
 	u, err := h.users.Find(email)
 	if err != nil {
+		h.logger.WithFields(log.Fields{"email": email}).Error(err)
 		util.Render(c, util.RequestError{
 			Title:   "Failed!",
 			Message: "It seems we messed up somehow, please try again.",
@@ -110,16 +113,41 @@ func (h *AuthHandler) performSignUp(c *gin.Context) {
 	// hash the supplied password.
 	hash, err := hashPassword(password)
 	if err != nil {
+		h.logger.Error(err)
 		util.Render(c, util.RequestError{
 			Title:   "Failed!",
 			Message: "It seems we messed up somehow, please try again.",
 		}.Render(), SignUpPage)
 		return
 	}
+
+	// create a user wallet.
+	w, err := h.wallets.CreateUser(username)
+	if err != nil || w == "" {
+		h.logger.WithFields(log.Fields{"username": username, "step": "wallet"}).Error(err)
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "It seems we messed up somehow, please try again.",
+		}.Render(), SignUpPage)
+		return
+	}
+
+	// airdrop the users some tokens.
+	if err := h.wallets.Airdrop(w, 1.0); err != nil {
+		h.logger.WithFields(log.Fields{"wallet": w, "step": "airdrop"}).Error(err)
+		util.Render(c, util.RequestError{
+			Title:   "Failed!",
+			Message: "It seems we messed up somehow, please try again.",
+		}.Render(), SignUpPage)
+		return
+	}
+
+	// build the user.
 	user := coin.User{
 		Email:    email,
 		Username: username,
 		Password: hash,
+		Wallet:   w,
 	}
 
 	// store the user data.
@@ -158,4 +186,15 @@ func checkPasswordHash(password, hash string) bool {
 type UserManager interface {
 	Add(user coin.User) error
 	Find(email string) (coin.User, error)
+	FindByWallet(wallet string) coin.User
+}
+
+// WalletService defines the interface to interact with the blockchain wallet layer.
+type WalletService interface {
+	CreateUser(user string) (string, error)
+	GetUserBalance(user string) (string, error)
+	Airdrop(user string, amount float64) error
+	GetRewarded(user string) error
+	MakePayment(user string, amount int) error
+	GetUserTransactions(user string) ([]coin.Transaction, error)
 }

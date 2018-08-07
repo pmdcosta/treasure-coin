@@ -38,7 +38,23 @@ func (s *UserService) Save(user coin.User) error {
 	return s.client.Save(UserCollection, user.Email, j)
 }
 
-// Remove deletes the user from the databse.
+// Remove deletes the user from the database.
 func (s *UserService) Remove(user coin.User) error {
 	return s.client.Delete(UserCollection, user.Email)
+}
+
+// FindByWallet retrieves a user from the database by their wallet address.
+func (s *UserService) FindByWallet(wallet string) coin.User {
+	var user coin.User
+	s.client.Iterate(UserCollection, func(k, v []byte) error {
+		var u coin.User
+		json.Unmarshal(v, &u)
+
+		if u.Wallet == wallet {
+			user = u
+		}
+		return nil
+	})
+
+	return user
 }

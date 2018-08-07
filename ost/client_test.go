@@ -1,12 +1,10 @@
 package ost_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/pmdcosta/treasure-coin/ost"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 )
 
@@ -19,26 +17,11 @@ type Client struct {
 func NewClient() *Client {
 	log.SetLevel(log.DebugLevel)
 
-	// get credentials from 'env' file.
-	type Credentials struct {
-		Key     string
-		Secret  string
-		Url     string
-		Company string
-	}
-	file, err := os.Open("env")
-	if err != nil {
-		panic(err)
-	}
-	var cred Credentials
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&cred)
-	if err != nil {
-		panic(err)
-	}
+	cred := ost.Config{}
+	cred.LoadCred("../.env", "", "", "", "")
 
 	c := &Client{
-		Client: ost.NewClient(cred.Url, cred.Key, cred.Secret, cred.Company),
+		Client: ost.NewClient(cred),
 	}
 	return c
 }
@@ -73,10 +56,9 @@ func TestClient_GetUserTransactions(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(b), 1)
 	assert.Equal(t, b[0].Amount, "0.1")
-	assert.Equal(t, b[0].ActionId, 39879)
-	assert.Equal(t, b[0].AirdropedAmount, "0")
-	assert.Equal(t, b[0].FromUserID, "9bc1ee0d-084b-4d75-b798-fda6a270adcc")
-	assert.Equal(t, b[0].ToUserID, "87e9132d-0586-4beb-9600-ffa050966bc8")
+	assert.Equal(t, b[0].FromWallet, "9bc1ee0d-084b-4d75-b798-fda6a270adcc")
+	assert.Equal(t, b[0].ToWallet, "87e9132d-0586-4beb-9600-ffa050966bc8")
+	fmt.Println(b[0].Date)
 }
 
 // TestClient_Airdrop tests incrementing user's balance the API.
