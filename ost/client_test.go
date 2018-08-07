@@ -55,7 +55,7 @@ func TestClient_GetUserBalance(t *testing.T) {
 	c := NewClient()
 	b, err := c.GetUserBalance("5190fed7-dbfb-4687-b2c8-b5cd57002198")
 	assert.Nil(t, err)
-	assert.Equal(t, b, "0.1")
+	assert.Equal(t, "0", b)
 }
 
 // TestClient_CreateUser tests creating a new user using the API.
@@ -79,9 +79,16 @@ func TestClient_GetUserTransactions(t *testing.T) {
 	assert.Equal(t, b[0].ToUserID, "87e9132d-0586-4beb-9600-ffa050966bc8")
 }
 
-// TestClient_RewardToken tests making a company to user transaction.
-func TestClient_RewardToken(t *testing.T) {
+// TestClient_GetRewarded tests making a company to user transaction.
+func TestClient_GetRewarded(t *testing.T) {
 	c := NewClient()
-	err := c.RewardToken("5190fed7-dbfb-4687-b2c8-b5cd57002198")
+	err := c.GetRewarded("5190fed7-dbfb-4687-b2c8-b5cd57002198")
+	assert.Nil(t, err)
+}
+
+// TestClient_MakePayment tests making a user to company transaction.
+func TestClient_MakePayment(t *testing.T) {
+	c := NewClient()
+	err := c.MakePayment("5190fed7-dbfb-4687-b2c8-b5cd57002198", 2)
 	assert.Nil(t, err)
 }

@@ -206,17 +206,58 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	return resp.Data.Transactions, nil
 }
 
-// RewardToken makes a company-to-user transaction request to OST.
-func (c *Client) RewardToken(user string) error {
+// GetRewarded makes a company-to-user transaction request to OST.
+func (c *Client) GetRewarded(user string) error {
 	// build the request.
 	t := fmt.Sprintf("%d", time.Now().Unix())
 	r := "/transactions/"
 	query := map[string]string{
 		"request_timestamp": t,
 		"api_key":           c.apiKey,
+		"action_id":         "39879",
 		"from_user_id":      c.companyID,
 		"to_user_id":        user,
-		"action_id":         "39879",
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return err
+	}
+
+	// make the request.
+	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
+	if err != nil {
+		return err
+	}
+
+	// parse the response.
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != 200 {
+		return errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
+	}
+
+	return nil
+}
+
+// GetPayed makes a user-to-company transaction request to OST.
+func (c *Client) MakePayment(user string, amount int) error {
+	tokens := fmt.Sprintf("%f", float32(amount)*0.1)
+
+	// build the request.
+	t := fmt.Sprintf("%d", time.Now().Unix())
+	r := "/transactions/"
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"from_user_id":      user,
+		"to_user_id":        c.companyID,
+		"action_id":         "39876",
+		"amount":            tokens,
+		"currency":          "BT",
 	}
 	u, err := c.BuildRequest(c.url, r, query)
 	if err != nil {
