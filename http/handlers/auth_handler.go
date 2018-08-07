@@ -3,8 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"github.com/pmdcosta/treasure-coin"
 	"github.com/pmdcosta/treasure-coin/http/middlewares"
@@ -29,16 +27,18 @@ type AuthHandler struct {
 
 	// external services.
 	users   UserManager
+	games   GameManager
 	wallets WalletService
 }
 
 // NewAuthHandler returns a new instance of AuthHandler.
-func NewAuthHandler(auth *middlewares.AuthMiddleware, users UserManager, wallets WalletService) *AuthHandler {
+func NewAuthHandler(auth *middlewares.AuthMiddleware, users UserManager, games GameManager, wallets WalletService) *AuthHandler {
 	h := &AuthHandler{
 		logger:  log.WithFields(log.Fields{"package": "http", "module": "authHandler"}),
 		path:    "/auth",
 		auth:    auth,
 		users:   users,
+		games:   games,
 		wallets: wallets,
 	}
 
@@ -89,10 +89,12 @@ func (h *AuthHandler) performSignIn(c *gin.Context) {
 	h.auth.AddSession(c, u.Email)
 
 	// redirect to home page.
-	util.Render(c, util.RequestSuccess{
-		Title:   "Success!",
-		Message: fmt.Sprintf("Welcome back to treasure coin %s.", u.Username),
-	}.Render(), IndexPage)
+	games := h.games.List()
+	util.Render(c, gin.H{
+		"games":          games,
+		"MessageTitle":   "Success",
+		"MessageMessage": "Welcome back to treasure coin " + u.Username + ".",
+	}, IndexPage)
 }
 
 // performSignOut renders the about page.
@@ -164,10 +166,12 @@ func (h *AuthHandler) performSignUp(c *gin.Context) {
 	h.auth.AddSession(c, user.Email)
 
 	// redirect to home page.
-	util.Render(c, util.RequestSuccess{
-		Title:   "Success!",
-		Message: fmt.Sprintf("Welcome to treasure coin, %s.", user.Username),
-	}.Render(), IndexPage)
+	games := h.games.List()
+	util.Render(c, gin.H{
+		"games":          games,
+		"MessageTitle":   "Success",
+		"MessageMessage": "Welcome to treasure coin " + user.Username + ".",
+	}, IndexPage)
 }
 
 // hashPassword generates an hash based on the supplied string.

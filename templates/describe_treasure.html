@@ -59,21 +59,25 @@
 
                             <!-- Found -->
                             <div class="form-group row">
-                                <label class="col-sm-10 col-form-label"><strong>Already Discovered!</strong></label>
+                                <label class="col-sm-10 alert alert-success"><strong>Already Discovered!</strong></label>
                             </div>
                         {{ end }}
 
                         {{ if not .treasure.Found }}
                             <!-- Found -->
                             <div class="form-group row">
-                                <label class="col-sm-10 col-form-label"><strong>Remains to be Found!</strong></label>
+                                <label class="col-sm-12 alert alert-danger"><strong>Remains to be Found!</strong></label>
                             </div>
                         {{ end }}
 
+                        <!-- QR Code -->
                         {{ if eq .game.Creator .user.Email }}
                             <hr>
-                            <!-- QR Code -->
-                            <div class="col-lg-6">
+                            <br>
+                            <div class="row justify-content-md-center">
+                                <p>Print and hide the treasure QR code!</p>
+                            </div>
+                            <div class="row justify-content-md-center">
                                 <img class="img-fluid rounded" src="/assets/codes/{{ .treasure.QRCode }}" alt="">
                             </div>
                         {{ end }}

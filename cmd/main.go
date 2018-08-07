@@ -42,7 +42,7 @@ func main() {
 
 	// instantiate the handlers.
 	dh := handlers.NewDefaultHandler(am, db.GameService(), db.UserService(), st)
-	ah := handlers.NewAuthHandler(am, db.UserService(), st)
+	ah := handlers.NewAuthHandler(am, db.UserService(), db.GameService(), st)
 	gh := handlers.NewGameHandler(am, db.GameService(), st, *serverHost)
 
 	// start the server.
