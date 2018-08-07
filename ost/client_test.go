@@ -81,3 +81,10 @@ func TestClient_MakePayment(t *testing.T) {
 	err := c.MakePayment("5190fed7-dbfb-4687-b2c8-b5cd57002198", 2)
 	assert.Nil(t, err)
 }
+
+// TestClient_RemoveTokens tests removing all tokens from a client transaction.
+func TestClient_RemoveTokens(t *testing.T) {
+	c := NewClient()
+	err := c.RemoveTokens("5190fed7-dbfb-4687-b2c8-b5cd57002198")
+	assert.Nil(t, err)
+}

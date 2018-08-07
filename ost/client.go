@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -337,6 +338,62 @@ func (c *Client) MakePayment(user string, amount int) error {
 	}
 
 	return nil
+}
+
+// DecreaseTokens removes tokens from clients and returns them to the pool.
+func (c *Client) DecreaseTokens(user string, amount float64) error {
+	tokens := fmt.Sprintf("%f", amount)
+
+	// build the request.
+	t := fmt.Sprintf("%d", time.Now().Unix())
+	r := "/transactions/"
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"from_user_id":      user,
+		"to_user_id":        c.companyID,
+		"action_id":         "39928",
+		"amount":            tokens,
+		"currency":          "BT",
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return err
+	}
+
+	// make the request.
+	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
+	if err != nil {
+		return err
+	}
+
+	// parse the response.
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != 200 {
+		return errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
+	}
+
+	return nil
+}
+
+func (c *Client) RemoveTokens(user string) error {
+	s, err := c.GetUserBalance(user)
+	if err != nil {
+		return err
+	}
+
+	amount, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+
+	err = c.DecreaseTokens(user, amount)
+	return err
 }
 
 // BuildRequest builds the OST request params.
