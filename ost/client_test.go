@@ -55,3 +55,16 @@ func TestClient_GetUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, b, "0")
 }
+
+// TestClient_GetUserTransactions tests getting user transactions using the API.
+func TestClient_GetUserTransactions(t *testing.T) {
+	c := NewClient()
+	b, err := c.GetUserTransactions("87e9132d-0586-4beb-9600-ffa050966bc8")
+	assert.Nil(t, err)
+	assert.Equal(t, len(b), 1)
+	assert.Equal(t, b[0].Amount, "0.1")
+	assert.Equal(t, b[0].ActionId, 39879)
+	assert.Equal(t, b[0].AirdropedAmount, "0")
+	assert.Equal(t, b[0].FromUserID, "9bc1ee0d-084b-4d75-b798-fda6a270adcc")
+	assert.Equal(t, b[0].ToUserID, "87e9132d-0586-4beb-9600-ffa050966bc8")
+}

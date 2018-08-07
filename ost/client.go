@@ -21,6 +21,23 @@ type Client struct {
 	apiSecret string
 }
 
+type Transaction struct {
+	Id               string `json:"id"`
+	FromUserID       string `json:"from_user_id"`
+	ToUserID         string `json:"to_user_id"`
+	TransactionHash  string `json:"transaction_hash"`
+	ActionId         int    `json:"action_id"`
+	TimeStamp        int    `json:"timestamp"`
+	Status           string `json:"status"`
+	GasPrice         string `json:"gas_price"`
+	GasUsed          string `json:"gas_used"`
+	TransactionFee   string `json:"transaction_fee"`
+	BlockNumber      int    `json:"block_number"`
+	Amount           string `json:"amount"`
+	CommissionAmount string `json:"commission_amount"`
+	AirdropedAmount  string `json:"airdropped_amount"`
+}
+
 // NewClient returns a new configuration client.
 func NewClient(url, apiKey, apiSecret string) *Client {
 	c := &Client{
@@ -79,4 +96,40 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 	json.Unmarshal(contents, &resp)
 
 	return resp.Data.User.Balance, nil
+}
+
+// GetUserTransactions retrieves the last 10 transactions from OST.
+func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
+	r := fmt.Sprintf("/ledger/%s/", user)
+	t := fmt.Sprintf("%d", time.Now().Unix())
+	q := fmt.Sprintf("api_key=%s&page_no=1&request_timestamp=%s", c.apiKey, t)
+	s := c.CreateSignature(r, q)
+	u := c.url + r + "?" + s
+
+	// make the request.
+	response, err := http.Get(u)
+	if err != nil {
+		return nil, err
+	}
+
+	// parse the response.
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// response struct.
+	type GetUserResponse struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Transactions []Transaction `json:"transactions"`
+		} `json:"data"`
+	}
+
+	// unmarhal the response.
+	var resp GetUserResponse
+	json.Unmarshal(contents, &resp)
+
+	return resp.Data.Transactions, nil
 }
