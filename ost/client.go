@@ -6,10 +6,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -20,6 +22,7 @@ type Client struct {
 	url       string
 	apiKey    string
 	apiSecret string
+	companyID string
 }
 
 type Transaction struct {
@@ -40,12 +43,13 @@ type Transaction struct {
 }
 
 // NewClient returns a new configuration client.
-func NewClient(url, apiKey, apiSecret string) *Client {
+func NewClient(url, apiKey, apiSecret, companyID string) *Client {
 	c := &Client{
 		logger:    log.WithFields(log.Fields{"package": "ost"}),
 		url:       url,
 		apiKey:    apiKey,
 		apiSecret: apiSecret,
+		companyID: companyID,
 	}
 	return c
 }
@@ -61,14 +65,21 @@ func (c *Client) CreateSignature(resource, q string) string {
 
 // GetUserBalance retrieves the user balance from OST.
 func (c *Client) GetUserBalance(user string) (string, error) {
-	r := fmt.Sprintf("/users/%s/", user)
+	// build the request.
 	t := fmt.Sprintf("%d", time.Now().Unix())
-	q := fmt.Sprintf("api_key=%s&id=%s&request_timestamp=%s", c.apiKey, user, t)
-	s := c.CreateSignature(r, q)
-	u := c.url + r + "?" + q + "&signature=" + s
+	r := fmt.Sprintf("/users/%s/", user)
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"id":                user,
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return "", err
+	}
 
 	// make the request.
-	response, err := http.Get(u)
+	response, err := http.Get(u.String())
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +91,11 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 		return "", err
 	}
 
-	// response struct.
+	if response.StatusCode != 200 {
+		return "", errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
+	}
+
+	// unmarhal the response.
 	type GetUserResponse struct {
 		Success bool `json:"success"`
 		Data    struct {
@@ -89,8 +104,6 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 			} `json:"user"`
 		} `json:"data"`
 	}
-
-	// unmarhal the response.
 	var resp GetUserResponse
 	json.Unmarshal(contents, &resp)
 
@@ -99,15 +112,21 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 
 // CreateUser creates a new user account in the OST platform.
 func (c *Client) CreateUser(user string) (string, error) {
-	r := fmt.Sprintf("/users/")
+	// build the request.
 	t := fmt.Sprintf("%d", time.Now().Unix())
-	q := fmt.Sprintf("api_key=%s&name=%s&request_timestamp=%s", c.apiKey, user, t)
-	s := c.CreateSignature(r, q)
-	fq := q + "&signature=" + s
-	u := c.url + r + "?" + fq
+	r := "/users/"
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"name":              user,
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return "", err
+	}
 
 	// make the request.
-	response, err := http.Post(u, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(fq)))
+	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
 	if err != nil {
 		return "", err
 	}
@@ -117,6 +136,10 @@ func (c *Client) CreateUser(user string) (string, error) {
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", err
+	}
+
+	if response.StatusCode != 200 {
+		return "", errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
 	}
 
 	// response struct.
@@ -138,14 +161,21 @@ func (c *Client) CreateUser(user string) (string, error) {
 
 // GetUserTransactions retrieves the last 10 transactions from OST.
 func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
-	r := fmt.Sprintf("/ledger/%s/", user)
+	// build the request.
 	t := fmt.Sprintf("%d", time.Now().Unix())
-	q := fmt.Sprintf("api_key=%s&page_no=1&request_timestamp=%s", c.apiKey, t)
-	s := c.CreateSignature(r, q)
-	u := c.url + r + "?" + q + "&signature=" + s
+	r := fmt.Sprintf("/ledger/%s/", user)
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"page_no":           "1",
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return []Transaction{}, err
+	}
 
 	// make the request.
-	response, err := http.Get(u)
+	response, err := http.Get(u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +185,10 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode != 200 {
+		return []Transaction{}, errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
 	}
 
 	// response struct.
@@ -170,4 +204,67 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	json.Unmarshal(contents, &resp)
 
 	return resp.Data.Transactions, nil
+}
+
+// RewardToken makes a company-to-user transaction request to OST.
+func (c *Client) RewardToken(user string) error {
+	// build the request.
+	t := fmt.Sprintf("%d", time.Now().Unix())
+	r := "/transactions/"
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"from_user_id":      c.companyID,
+		"to_user_id":        user,
+		"action_id":         "39879",
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return err
+	}
+
+	// make the request.
+	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
+	if err != nil {
+		return err
+	}
+
+	// parse the response.
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != 200 {
+		return errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
+	}
+
+	fmt.Println(string(contents))
+
+	return nil
+}
+
+// BuildRequest builds the OST request params.
+func (c *Client) BuildRequest(host string, resource string, query map[string]string) (*url.URL, error) {
+	// build url.
+	u, err := url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+
+	// add resource path.
+	u.Path = u.Path + resource
+
+	// add query parameters.
+	q := u.Query()
+	for k, v := range query {
+		q.Add(k, v)
+	}
+
+	// add signature.
+	q.Add("signature", c.CreateSignature(resource, q.Encode()))
+	u.RawQuery = q.Encode()
+
+	return u, nil
 }

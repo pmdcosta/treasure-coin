@@ -21,9 +21,10 @@ func NewClient() *Client {
 
 	// get credentials from 'env' file.
 	type Credentials struct {
-		Key    string
-		Secret string
-		Url    string
+		Key     string
+		Secret  string
+		Url     string
+		Company string
 	}
 	file, err := os.Open("env")
 	if err != nil {
@@ -37,7 +38,7 @@ func NewClient() *Client {
 	}
 
 	c := &Client{
-		Client: ost.NewClient(cred.Url, cred.Key, cred.Secret),
+		Client: ost.NewClient(cred.Url, cred.Key, cred.Secret, cred.Company),
 	}
 	return c
 }
@@ -49,12 +50,12 @@ func TestClient_CreateSignature(t *testing.T) {
 	assert.Equal(t, "28e9035850612343fdd46a38d5c35f451e0035680509572e56cd4f984987ebc9", sig)
 }
 
-// TestClient_GetUser tests creating a new user using the API.
-func TestClient_GetUser(t *testing.T) {
+// TestClient_GetUserBalance tests getting the user balance from OST.
+func TestClient_GetUserBalance(t *testing.T) {
 	c := NewClient()
 	b, err := c.GetUserBalance("5190fed7-dbfb-4687-b2c8-b5cd57002198")
 	assert.Nil(t, err)
-	assert.Equal(t, b, "0")
+	assert.Equal(t, b, "0.1")
 }
 
 // TestClient_CreateUser tests creating a new user using the API.
@@ -76,4 +77,11 @@ func TestClient_GetUserTransactions(t *testing.T) {
 	assert.Equal(t, b[0].AirdropedAmount, "0")
 	assert.Equal(t, b[0].FromUserID, "9bc1ee0d-084b-4d75-b798-fda6a270adcc")
 	assert.Equal(t, b[0].ToUserID, "87e9132d-0586-4beb-9600-ffa050966bc8")
+}
+
+// TestClient_RewardToken tests making a company to user transaction.
+func TestClient_RewardToken(t *testing.T) {
+	c := NewClient()
+	err := c.RewardToken("5190fed7-dbfb-4687-b2c8-b5cd57002198")
+	assert.Nil(t, err)
 }
