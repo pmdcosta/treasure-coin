@@ -1,6 +1,7 @@
 package ost
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -55,9 +56,7 @@ func (c *Client) CreateSignature(resource, q string) string {
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(resource + "?" + q))
 
-	params := q + "&signature=" + hex.EncodeToString(h.Sum(nil))
-
-	return params
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // GetUserBalance retrieves the user balance from OST.
@@ -66,7 +65,7 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 	t := fmt.Sprintf("%d", time.Now().Unix())
 	q := fmt.Sprintf("api_key=%s&id=%s&request_timestamp=%s", c.apiKey, user, t)
 	s := c.CreateSignature(r, q)
-	u := c.url + r + "?" + s
+	u := c.url + r + "?" + q + "&signature=" + s
 
 	// make the request.
 	response, err := http.Get(u)
@@ -98,13 +97,52 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 	return resp.Data.User.Balance, nil
 }
 
+// CreateUser creates a new user account in the OST platform.
+func (c *Client) CreateUser(user string) (string, error) {
+	r := fmt.Sprintf("/users/")
+	t := fmt.Sprintf("%d", time.Now().Unix())
+	q := fmt.Sprintf("api_key=%s&name=%s&request_timestamp=%s", c.apiKey, user, t)
+	s := c.CreateSignature(r, q)
+	fq := q + "&signature=" + s
+	u := c.url + r + "?" + fq
+
+	// make the request.
+	response, err := http.Post(u, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(fq)))
+	if err != nil {
+		return "", err
+	}
+
+	// parse the response.
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// response struct.
+	type CreateUserResponse struct {
+		Success bool `json:"success"`
+		Data    struct {
+			User struct {
+				ID string `json:"id"`
+			} `json:"user"`
+		} `json:"data"`
+	}
+
+	// unmarhal the response.
+	var resp CreateUserResponse
+	json.Unmarshal(contents, &resp)
+
+	return resp.Data.User.ID, nil
+}
+
 // GetUserTransactions retrieves the last 10 transactions from OST.
 func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 	r := fmt.Sprintf("/ledger/%s/", user)
 	t := fmt.Sprintf("%d", time.Now().Unix())
 	q := fmt.Sprintf("api_key=%s&page_no=1&request_timestamp=%s", c.apiKey, t)
 	s := c.CreateSignature(r, q)
-	u := c.url + r + "?" + s
+	u := c.url + r + "?" + q + "&signature=" + s
 
 	// make the request.
 	response, err := http.Get(u)
