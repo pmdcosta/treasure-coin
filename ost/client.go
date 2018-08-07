@@ -208,15 +208,22 @@ func (c *Client) GetUserTransactions(user string) ([]Transaction, error) {
 
 // Airdrop adds TreasureCoins to a user's balance from OST.
 func (c *Client) Airdrop(user string, amount float64) error {
-	r := fmt.Sprintf("/airdrops")
 	t := fmt.Sprintf("%d", time.Now().Unix())
-	q := fmt.Sprintf("amount=%f&api_key=%s&request_timestamp=%s&user_ids=%s", amount, c.apiKey, t, user)
-	s := c.CreateSignature(r, q)
-	fq := q + "&signature=" + s
-	u := c.url + r + "?" + s
+	a := fmt.Sprintf("%f", amount)
+	r := "/airdrops/"
+	query := map[string]string{
+		"request_timestamp": t,
+		"api_key":           c.apiKey,
+		"amount":            a,
+		"user_ids":          user,
+	}
+	u, err := c.BuildRequest(c.url, r, query)
+	if err != nil {
+		return err
+	}
 
 	// make the request.
-	response, err := http.Post(u, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(fq)))
+	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
 	if err != nil {
 		return err
 	}
