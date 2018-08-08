@@ -208,8 +208,10 @@ func (c *Client) GetUserTransactions(user string) ([]coin.Transaction, error) {
 		}
 		if t.FromUserID == c.companyID {
 			tr.Event = "Treasure Found"
+			tr.Amount = "+" + tr.Amount
 		} else {
 			tr.Event = "Game Created"
+			tr.Amount = "-" + tr.Amount
 		}
 		transactions = append(transactions, tr)
 	}
