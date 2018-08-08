@@ -4,3 +4,4 @@ javascript_client
 *.db
 .env
 ssl
+main
