@@ -1,12 +1,10 @@
 package middlewares
 
 import (
-	"math/rand"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/pmdcosta/treasure-coin"
 	"github.com/pmdcosta/treasure-coin/http/util"
+	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +41,7 @@ func (m AuthMiddleware) SetUserStatus() gin.HandlerFunc {
 			if (err == nil && user != coin.User{}) {
 				c.Set(util.LogInCookie, true)
 				c.Set(util.UserCookie, user)
-				m.logger.WithFields(log.Fields{"token": token, "user": user.Email}).Debug("current session")
+				m.logger.WithFields(log.Fields{"token": token, "session": s, "user": user.Email}).Debug("current session")
 				return
 			}
 		}
@@ -58,6 +56,7 @@ func (m *AuthMiddleware) AddSession(c *gin.Context, user string) {
 	c.SetCookie(TokenCookie, t, 3600, "", "", false, true)
 	c.Set(util.LogInCookie, true)
 	m.sessions.Add(t, user)
+	m.logger.WithFields(log.Fields{"user": user, "token": t}).Info("user signing in")
 }
 
 // RemoveSession removes a new active session.
@@ -72,7 +71,8 @@ func (m *AuthMiddleware) RemoveSession(c *gin.Context) {
 
 // CreateSessionToken generate a new session token to store in the cookie.
 func CreateSessionToken() string {
-	return strconv.FormatInt(rand.Int63(), 16)
+	token, _ := uuid.NewV4()
+	return token.String()
 }
 
 // UserManager defines the interface to interact with the user persistence layer.

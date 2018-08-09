@@ -72,6 +72,8 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 		return "", err
 	}
 
+	c.logger.WithFields(log.Fields{"id": user}).Info("getting user balance from OST API")
+
 	// make the request.
 	response, err := http.Get(u.String())
 	if err != nil {
@@ -101,7 +103,11 @@ func (c *Client) GetUserBalance(user string) (string, error) {
 	var resp GetUserResponse
 	json.Unmarshal(contents, &resp)
 
-	return resp.Data.User.Balance, nil
+	balance := resp.Data.User.Balance
+
+	c.logger.WithFields(log.Fields{"id": user, "balance": balance}).Info("user balance retrieved from OST API")
+
+	return balance, nil
 }
 
 // CreateUser creates a new user account in the OST platform.
@@ -118,6 +124,8 @@ func (c *Client) CreateUser(user string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	c.logger.WithFields(log.Fields{"name": user}).Info("creating user account in OST API")
 
 	// make the request.
 	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
@@ -150,7 +158,11 @@ func (c *Client) CreateUser(user string) (string, error) {
 	var resp CreateUserResponse
 	json.Unmarshal(contents, &resp)
 
-	return resp.Data.User.ID, nil
+	id := resp.Data.User.ID
+
+	c.logger.WithFields(log.Fields{"name": user, "id": id}).Info("user account created in OST API")
+
+	return id, nil
 }
 
 // GetUserTransactions retrieves the last 10 transactions from OST.
@@ -167,6 +179,8 @@ func (c *Client) GetUserTransactions(user string) ([]coin.Transaction, error) {
 	if err != nil {
 		return []coin.Transaction{}, err
 	}
+
+	c.logger.WithFields(log.Fields{"id": user}).Info("getting user transactions from the OST API")
 
 	// make the request.
 	response, err := http.Get(u.String())
@@ -196,6 +210,8 @@ func (c *Client) GetUserTransactions(user string) ([]coin.Transaction, error) {
 	// unmarhal the response.
 	var resp GetUserResponse
 	json.Unmarshal(contents, &resp)
+
+	c.logger.WithFields(log.Fields{"transactions": fmt.Sprintf("%+v", resp.Data.Transactions)}).Info("transactions retrieved from the OST API")
 
 	// format transaction data.
 	transactions := make([]coin.Transaction, 0)
@@ -235,6 +251,8 @@ func (c *Client) Airdrop(user string, amount float64) error {
 		return err
 	}
 
+	c.logger.WithFields(log.Fields{"amount": amount, "user": user}).Info("airdropping tokens using the OST API")
+
 	// make the request.
 	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
 	if err != nil {
@@ -261,6 +279,8 @@ func (c *Client) Airdrop(user string, amount float64) error {
 	if !resp.Success {
 		return errors.New(resp.Error.Msg)
 	}
+
+	c.logger.WithFields(log.Fields{"amount": amount, "user": user}).Info("tokens airdropped using the OST API")
 	return nil
 }
 
@@ -281,6 +301,8 @@ func (c *Client) GetRewarded(user string) error {
 		return err
 	}
 
+	c.logger.WithFields(log.Fields{"from": c.companyID, "to": user}).Info("executing company-to-user token transfer using the OST API")
+
 	// make the request.
 	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
 	if err != nil {
@@ -297,6 +319,8 @@ func (c *Client) GetRewarded(user string) error {
 	if response.StatusCode != 200 {
 		return errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
 	}
+
+	c.logger.WithFields(log.Fields{"from": c.companyID, "to": user}).Info("tokens transferred using the OST API")
 
 	return nil
 }
@@ -322,6 +346,8 @@ func (c *Client) MakePayment(user string, amount int) error {
 		return err
 	}
 
+	c.logger.WithFields(log.Fields{"from": user, "to": c.companyID}).Info("executing user-to-company token transfer using the OST API")
+
 	// make the request.
 	response, err := http.Post(u.String(), "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(u.RawQuery)))
 	if err != nil {
@@ -338,6 +364,8 @@ func (c *Client) MakePayment(user string, amount int) error {
 	if response.StatusCode != 200 {
 		return errors.New("Invalid status code received: " + response.Status + " | " + string(contents))
 	}
+
+	c.logger.WithFields(log.Fields{"from": user, "to": c.companyID}).Info("tokens transferred using the OST API")
 
 	return nil
 }
